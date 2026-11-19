@@ -10,15 +10,15 @@
 
 ---
 
-## ⚔️ The "Witcher 2 Combat Log" Diagnostic Engine
-Inspired by *The Witcher 2* combat logs (which explicitly tell you: *"Geralt took 42 damage: Backstabbed by Nekker (+50% bonus damage) - Armor mitigated 12 damage"*), Nabih features a **deep observability and diagnostic logging engine** (`core/diagnostics.py`). 
+## 🔬 Deep Observability & Pipeline Telemetry Engine
+Nabih features a dedicated **distributed tracing, latency profiling, and root-cause diagnostic engine** (`core/diagnostics.py`). 
 
 Instead of guessing why an audio snippet was misunderstood or why a call lagged, every single interaction generates a comprehensive breakdown:
-1. **Audio Stage Log:** Mic recording duration (ms), In-memory buffer size (KB), and RMS volume level (alerts if mic is too quiet or muted).
-2. **STT Stage Log (Groq Whisper):** Exact HTTP response code, network round-trip time (RTT in ms), and raw extracted Egyptian Arabic text.
-3. **LLM Brain Stage Log (Hosted Qwen 27B):** Time To First Token (TTFT in ms), total generation time, tokens per second, and complete tool-calling schema inspection.
+1. **Audio Stage Profiling:** Mic recording duration (ms), In-memory buffer size (KB), and RMS volume level (alerts if mic is too quiet or muted).
+2. **STT Stage Profiling (Groq Whisper):** Exact HTTP response code, network round-trip time (RTT in ms), and raw extracted Egyptian Arabic text.
+3. **LLM Brain Stage Profiling (Hosted Qwen 27B):** Time To First Token (TTFT in ms), total generation time, tokens per second, and complete tool-calling schema inspection.
 4. **Tool Execution Profiler:** Exact tool invoked, incoming arguments, execution duration, and full formatted traceback if an error occurs.
-5. **TTS Streaming Log (Edge-TTS):** Time to first audio chunk (ms) and playback status.
+5. **TTS Streaming Profiling (Edge-TTS):** Time to first audio chunk (ms) and playback status.
 6. **End-to-End Latency Table:** Formatted visual table rendered in the terminal via `rich` after every turn:
    ```text
    ┌───────────────────────┬────────────┬──────────┐
@@ -48,33 +48,30 @@ All logs are dual-outputted: formatted colorfully to the terminal with `rich` an
 | **Desktop UI** | Modern HTML/CSS/Tailwind via `pywebview` | Sleek glowing orb interface using native Edge WebView2 (lightweight, ~30MB RAM vs 250MB Electron) |
 | **Trigger Mechanism** | Push-to-Talk (`pynput` Global Hotkey) | Zero idle CPU/GPU consumption, prevents ambient noise false-triggers |
 | **Audio Pipeline** | In-Memory Audio (`io.BytesIO`) | Zero disk I/O latency; audio buffers live and die directly in RAM |
-| **Observability** | Witcher Diagnostics (`rich` + `loguru`) | Real-time millisecond profiling and deterministic error autopsy |
+| **Observability** | Pipeline Telemetry (`rich` + `loguru`) | Real-time millisecond profiling and deterministic root cause error analysis |
 
 ---
 
 ## 📊 Current Project State
 
-* **Active Phase:** `Phase 0: Environment Setup, Configuration & Witcher Diagnostics`
-* **Codebase Status:** Initializing base structure.
+* **Active Phase:** `Phase 0: Environment Setup, Configuration & Diagnostics`
+* **Codebase Status:** Steps 0.1, 0.2, 0.3, and 0.4 completed.
 * **Immediate Next Action:**
-  1. Create `requirements.txt` and set up the Python virtual environment (`venv`).
-  2. Create `config.py` and `.env.example` / `.env` for API keys and host endpoints.
-  3. Implement `core/diagnostics.py` (The Witcher Logging Engine).
-  4. Build and execute `sanity_check.py` to verify API connectivity and print the first diagnostic report.
+  - Build and execute `sanity_check.py` to verify API connectivity and print the first live telemetry report.
 
 ---
 
 ## 🗺️ Implementation Roadmap
 
-### [ ] Phase 0: Environment Setup, Configuration & Witcher Diagnostics
-- [ ] Create standardized project directory skeleton (`core/`, `services/`, `tools/`, `ui/`, `logs/`).
-- [ ] Define dependencies in `requirements.txt` (`rich`, `loguru`, `openai`, `edge-tts`, `sounddevice`, `numpy`, `pywebview`, `pynput`).
-- [ ] Implement central configuration reader in `config.py` with `.env` validation.
-- [ ] **Build The Witcher Diagnostic Engine (`core/diagnostics.py`):**
-  - [ ] Implement `Timer` context managers for millisecond-level step profiling.
-  - [ ] Implement RMS audio volume level analyzer to detect microphone clipping or silence.
-  - [ ] Implement `rich` terminal summary tables for end-to-end latency breakdowns.
-  - [ ] Configure `loguru` file logger with automatic daily rotation in `logs/`.
+### [ ] Phase 0: Environment Setup, Configuration & Diagnostics
+- [x] Create standardized project directory skeleton (`core/`, `services/`, `tools/`, `ui/`, `logs/`).
+- [x] Define dependencies in `requirements.txt` (`rich`, `loguru`, `openai`, `edge-tts`, `sounddevice`, `numpy`, `pywebview`, `pynput`).
+- [x] Implement central configuration reader in `config.py` with `.env` validation.
+- [x] **Build Pipeline Telemetry & Diagnostics Engine (`core/diagnostics.py`):**
+  - [x] Implement `Timer` context managers for millisecond-level step profiling.
+  - [x] Implement RMS audio volume level analyzer to detect microphone clipping or silence.
+  - [x] Implement `rich` terminal summary tables for end-to-end latency breakdowns.
+  - [x] Configure `loguru` file logger with automatic daily rotation in `logs/`.
 - [ ] **Build Sanity Verification Suite (`sanity_check.py`):**
   - [ ] Ping Groq Whisper API endpoint.
   - [ ] Ping Hosted Qwen 27B LLM endpoint.
@@ -97,7 +94,7 @@ All logs are dual-outputted: formatted colorfully to the terminal with `rich` an
 - [ ] Build `tools/registry.py`: `@register_tool` decorator with automated JSON schema extraction for function calling.
 - [ ] Build `tools/file_tools.py`: Local directory tree explorer, file reader, and code writer.
 - [ ] Build `tools/terminal_tools.py`: Safe CLI command runner (`git status`, `npm run`, etc.) with security sandboxing.
-- [ ] Hook tool-calling loop into the LLM orchestrator with Witcher diagnostic profiling for tool execution time and I/O.
+- [ ] Hook tool-calling loop into the LLM orchestrator with diagnostic profiling for tool execution time and I/O.
 - [ ] Test voice-guided bug fixing on a local project file.
 
 ### [ ] Phase 4: Desktop UI & Global Hotkey (The Full Experience)
@@ -125,7 +122,7 @@ C:/Users/moame/nabih/
 │   ├── state_machine.py     # State management (Idle, Listening, Thinking, Speaking)
 │   ├── audio_recorder.py    # In-memory RAM audio capture
 │   ├── hotkey_listener.py   # Global Push-to-Talk daemon
-│   └── diagnostics.py       # The Witcher Combat Logger & telemetry engine
+│   └── diagnostics.py       # Pipeline Telemetry & Root Cause Diagnostics
 │
 ├── services/
 │   ├── __init__.py
@@ -146,6 +143,7 @@ C:/Users/moame/nabih/
 │
 ├── logs/                    # Rotating structured diagnostic logs
 ├── .env.example             # Template for API credentials & endpoints
+├── .env                     # Local secrets
 ├── config.py                # Centralized environment loader
 ├── requirements.txt         # Pinned project dependencies
 ├── sanity_check.py          # End-to-end diagnostic verification script
