@@ -1,0 +1,24 @@
+# ==========================================
+# Project Nabih - Requirements Specification
+# ==========================================
+
+# 1. Observability & Witcher Diagnostics Engine
+rich>=13.7.0
+loguru>=0.7.2
+
+# 2. LLM & Speech Processing (Groq Whisper & Edge-TTS)
+openai>=1.20.0
+edge-tts>=6.1.10
+sounddevice>=0.4.6
+soundfile>=0.12.1
+numpy>=1.26.0
+scipy>=1.12.0
+pygame>=2.5.0
+
+# 3. Configuration & Settings Management
+python-dotenv>=1.0.1
+pydantic-settings>=2.2.0
+
+# 4. Desktop UI & Global Hotkeys
+pywebview>=5.0.0
+pynput>=1.7.6
