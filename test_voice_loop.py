@@ -1,6 +1,6 @@
 """
-Interactive Real-Time Voice & Live Text Loop for Project Nabih (Phase 1).
-Synchronized audio playback and real-time live subtitles with zero disk I/O.
+Interactive Real-Time Voice & Live Text Loop for Project Nabih (Phase 2).
+Complete loop: Voice in -> Groq STT -> Sovereign Qwen 27B LLM -> Munsit Hala TTS + Live Subtitles.
 """
 
 import sys
@@ -21,12 +21,12 @@ from config import settings
 from core.audio_recorder import AudioRecorder
 from services.stt_service import STTService
 from services.tts_service import TTSService
+from services.llm_service import LLMService
 from core.diagnostics import PipelineTelemetry, console
 
 
 async def stream_synchronized_text(prefix: str, full_text: str, playback_event: asyncio.Event, delay_per_word: float = 0.22):
-    """Waits for playback to actually begin, then animates text in sync with speech."""
-    # Wait until audio is actively emitting sound from the speakers!
+    """Waits for audio playback to actually begin, then animates text in sync with speech."""
     await playback_event.wait()
     
     words = full_text.split()
@@ -42,8 +42,8 @@ async def stream_synchronized_text(prefix: str, full_text: str, playback_event: 
             await asyncio.sleep(delay_per_word)
 
 
-async def run_voice_turn(recorder: AudioRecorder, stt: STTService, tts: TTSService, turn_index: int):
-    """Executes a single interactive voice-to-voice turn."""
+async def run_voice_turn(recorder: AudioRecorder, stt: STTService, tts: TTSService, llm: LLMService, turn_index: int):
+    """Executes a single interactive voice-to-voice turn powered by Qwen 27B."""
     console.print(f"\n[bold cyan]━━━ 🎙️ Turn #{turn_index} ━━━[/bold cyan]")
     console.print("[bold yellow]Press [ENTER] to START recording and speak...[/bold yellow]")
     await asyncio.to_thread(input)
@@ -89,19 +89,28 @@ async def run_voice_turn(recorder: AudioRecorder, stt: STTService, tts: TTSServi
     )
     console.print(user_panel)
 
-    # 5. Snappy, Natural Confirmation Phrase (optimized for ultra-low latency)
-    shuri_reply = f"سامعاك يا برنس! قولت: {user_transcript}."
+    # 5. Intelligent Reasoning via Hosted Qwen 27B on Sovereign EG
+    shuri_reply = ""
+    with session.profile_step("Qwen 27B Brain", "🧠") as step:
+        try:
+            console.print("[dim cyan]🧠 التفكير جاري عبر Sovereign Qwen 27B...[/dim cyan]")
+            shuri_reply, ttft_ms, duration_ms = await llm.generate_response(user_transcript)
+            step.notes = f"TTFT: {ttft_ms:.1f}ms | Total: {duration_ms:.1f}ms | Model: Qwen 27B"
+        except Exception as ex:
+            step.status = "FAIL"
+            step.error = f"LLM error: {ex}"
+            shuri_reply = "حصل خطأ بسيط في سيرفر التفكير يا هندسة، جرب تسألني تاني."
 
-    # 6. Synchronized Audio Playback + Live Subtitle Streaming
-    with session.profile_step("Edge-TTS Voice", "🔊") as step:
+    # 6. Synchronized Audio Playback (Munsit Hala) + Live Subtitle Streaming
+    with session.profile_step("Voice & Subtitles", "🔊") as step:
         playback_started_event = asyncio.Event()
 
         # Run speech playback and synchronized typewriter subtitles concurrently!
         await asyncio.gather(
             tts.speak(shuri_reply, on_start=playback_started_event.set),
-            stream_synchronized_text("شوري: ", shuri_reply, playback_started_event, delay_per_word=0.22)
+            stream_synchronized_text("نبيه: ", shuri_reply, playback_started_event, delay_per_word=0.22)
         )
-        step.notes = f"Voice: {settings.TTS_VOICE} | Perfectly synchronized audio & text"
+        step.notes = f"Provider: {settings.TTS_PROVIDER.upper()} | Synchronized voice & text complete"
 
     # 7. Print the Telemetry Breakdown Table
     session.print_telemetry_table(
@@ -112,27 +121,29 @@ async def run_voice_turn(recorder: AudioRecorder, stt: STTService, tts: TTSServi
 
 async def main():
     console.print(Panel(
-        f"[bold cyan]Project Nabih - Interactive Voice Loop (Phase 1 Optimized)[/bold cyan]\n"
+        f"[bold cyan]Project Nabih - Real-Time AI Voice Assistant (Phase 2)[/bold cyan]\n"
         f"Microphone: In-Memory 16kHz PCM (RAM Buffer)\n"
         f"STT: Groq Whisper API ({settings.GROQ_MODEL})\n"
-        f"TTS: Microsoft Edge Neural Voice ({settings.TTS_VOICE}) [Synchronized]\n"
+        f"LLM Brain: Sovereign Qwen 27B ({settings.QWEN_MODEL_NAME})\n"
+        f"TTS Voice: Munsit AI (Hala) with Edge-TTS Fallback\n"
         "Press [Ctrl + C] anytime to exit.",
-        title="🌟 [bold blue]INTERACTIVE VOICE ENGINE[/bold blue]",
+        title="🌟 [bold blue]NABIH AI INTELLIGENT VOICE LOOP[/bold blue]",
         border_style="blue"
     ))
 
-    # Initialize services
+    # Initialize all operational services
     tts = TTSService()
     recorder = AudioRecorder()
     stt = STTService()
+    llm = LLMService()
 
     turn_count = 1
     try:
         while True:
-            await run_voice_turn(recorder, stt, tts, turn_count)
+            await run_voice_turn(recorder, stt, tts, llm, turn_count)
             turn_count += 1
     except KeyboardInterrupt:
-        console.print("\n[bold yellow]👋 Exiting Voice Loop. Great session, Prince![/bold yellow]\n")
+        console.print("\n[bold yellow]👋 Exiting Nabih Assistant. See you later, Prince![/bold yellow]\n")
 
 
 if __name__ == "__main__":

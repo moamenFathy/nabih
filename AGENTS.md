@@ -93,11 +93,12 @@ All logs are dual-outputted: formatted colorfully to the terminal with `rich` an
 - [x] Build `test_voice_loop.py`: Synchronized audio playback with real-time typewriter subtitles.
 - [x] Verified by user: Natural human speech and synchronized live subtitles running cleanly.
 
-### [ ] Phase 2: The Brain & Shuri Persona (Qwen 27B Streaming)
-- [ ] Build `services/llm_service.py`: OpenAI-compatible client connecting to user's hosted `Qwen 27B-FP8`.
-- [ ] Engineer the **Shuri Persona System Prompt**: Egyptian Arabic dialect, witty, sharp, direct, technical mastery.
-- [ ] Implement Producer-Consumer token chunker: Forward first generated sentence directly to TTS while LLM continues streaming.
-- [ ] Run full conversational test in CLI with Shuri's real-time voice under 1.5 seconds.
+### [ ] Phase 2: The Brain & Shuri Persona (INTEGRATED & TESTING)
+- [x] Build `services/llm_service.py`: OpenAI-compatible client connecting to user's hosted `Qwen 27B-FP8`.
+- [x] Engineer the **Shuri/Griot AI Persona System Prompt**: Wakandan AI assistant identity, Egyptian Arabic dialect, witty, sharp, direct, technical mastery.
+- [x] Implement Producer-Consumer token handling and multi-turn context memory.
+- [x] Integrate full intelligent voice loop in `test_voice_loop.py` (Groq STT -> Sovereign Qwen 27B -> Munsit Hala TTS + Live Subtitles).
+- [ ] User testing & sign-off.
 
 ### [ ] Phase 3: The Hands - Tool Registry & Project Access
 - [ ] Build `tools/registry.py`: `@register_tool` decorator with automated JSON schema extraction for function calling.
