@@ -54,16 +54,23 @@ All logs are dual-outputted: formatted colorfully to the terminal with `rich` an
 
 ## 📊 Current Project State
 
-* **Active Phase:** `Phase 0: Environment Setup, Configuration & Diagnostics`
-* **Codebase Status:** Steps 0.1, 0.2, 0.3, and 0.4 completed.
+* **Active Phase:** `Phase 1: In-Memory Voice Loop (STT & TTS)`
+* **Codebase Status:** Phase 0 (Environment, Config, Telemetry, and Sanity Checks) **100% COMPLETE & VERIFIED**.
+* **Connectivity Verified:**
+  - Groq Whisper API: Connected (HTTP 200 OK - 11 models available)
+  - Hosted Qwen 27B: Connected (HTTP 200 OK - Qwen3.8-27B-FP8)
+  - Edge-TTS: Verified (ar-EG-SalmaNeural generated audio in memory)
 * **Immediate Next Action:**
-  - Build and execute `sanity_check.py` to verify API connectivity and print the first live telemetry report.
+  - Build `core/audio_recorder.py` for RAM-based microphone capture.
+  - Build `services/stt_service.py` to stream audio buffers to Groq Whisper.
+  - Build `services/tts_service.py` to stream Edge-TTS audio to speakers.
+  - Test end-to-end voice loop in terminal (<1.0s latency).
 
 ---
 
 ## 🗺️ Implementation Roadmap
 
-### [ ] Phase 0: Environment Setup, Configuration & Diagnostics
+### [x] Phase 0: Environment Setup, Configuration & Diagnostics (COMPLETED)
 - [x] Create standardized project directory skeleton (`core/`, `services/`, `tools/`, `ui/`, `logs/`).
 - [x] Define dependencies in `requirements.txt` (`rich`, `loguru`, `openai`, `edge-tts`, `sounddevice`, `numpy`, `pywebview`, `pynput`).
 - [x] Implement central configuration reader in `config.py` with `.env` validation.
@@ -72,11 +79,11 @@ All logs are dual-outputted: formatted colorfully to the terminal with `rich` an
   - [x] Implement RMS audio volume level analyzer to detect microphone clipping or silence.
   - [x] Implement `rich` terminal summary tables for end-to-end latency breakdowns.
   - [x] Configure `loguru` file logger with automatic daily rotation in `logs/`.
-- [ ] **Build Sanity Verification Suite (`sanity_check.py`):**
-  - [ ] Ping Groq Whisper API endpoint.
-  - [ ] Ping Hosted Qwen 27B LLM endpoint.
-  - [ ] Synthesize test audio chunk with Edge-TTS (`ar-EG-SalmaNeural`).
-  - [ ] Print complete diagnostic verification table to terminal.
+- [x] **Build Sanity Verification Suite (`sanity_check.py`):**
+  - [x] Ping Groq Whisper API endpoint (Verified: HTTP 200 OK).
+  - [x] Ping Hosted Qwen 27B LLM endpoint (Verified: HTTP 200 OK).
+  - [x] Synthesize test audio chunk with Edge-TTS (`ar-EG-SalmaNeural` verified).
+  - [x] Print complete diagnostic verification table to terminal.
 
 ### [ ] Phase 1: In-Memory Voice Loop (STT & TTS)
 - [ ] Build `core/audio_recorder.py`: In-memory recording (`io.BytesIO`), buffer management, and volume calculation.
