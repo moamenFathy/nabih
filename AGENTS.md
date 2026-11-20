@@ -108,7 +108,7 @@ All logs are dual-outputted: formatted colorfully to the terminal with `rich` an
 ### [ ] Phase 3: The Hands - Tool Registry & Project Access
 - [x] Build `tools/registry.py`: `@register_tool` decorator with automated JSON schema extraction for function calling (COMPLETED & VERIFIED).
 - [x] Build `tools/file_tools.py`: Local directory tree explorer, file reader, code writer, and patcher (COMPLETED & VERIFIED).
-- [ ] Build `tools/terminal_tools.py`: Safe CLI command runner (`git status`, `npm run`, etc.) with security sandboxing.
+- [x] Build `tools/terminal_tools.py`: Safe CLI command runner (`git status`, `npm run`, etc.) with security sandboxing (COMPLETED & VERIFIED).
 - [ ] Hook tool-calling loop into the LLM orchestrator with diagnostic profiling for tool execution time and I/O.
 - [ ] Test voice-guided bug fixing on a local project file.
 
