@@ -113,7 +113,7 @@ All logs are dual-outputted: formatted colorfully to the terminal with `rich` an
 - [x] Test voice-guided project inspection and tool execution (COMPLETED & VERIFIED).
 
 ### [ ] Phase 4: Desktop UI & Global Hotkey (The Full Experience)
-- [ ] Build `core/state_machine.py`: Deterministic state transitions (`IDLE`, `LISTENING`, `THINKING`, `SPEAKING`).
+- [x] Build `core/state_machine.py`: Deterministic state transitions (`IDLE`, `LISTENING`, `THINKING`, `SPEAKING`) with barge-in support (COMPLETED & VERIFIED).
 - [ ] Build `core/hotkey_listener.py`: Global Push-to-Talk hotkey daemon (e.g. `Caps Lock`).
 - [ ] Design `ui/`: Modern, glowing orb widget in HTML/CSS/Tailwind rendered via `pywebview`.
 - [ ] Establish two-way Python-to-JS bridge to update orb state (glow, pulse, rotate, speak).
