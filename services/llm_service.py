@@ -15,6 +15,23 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+# -----------------------------------------------------------------------------
+# Resilient DNS Fallback for Sovereign EG in Egypt
+# Protects against local ISP DNS dropouts (TE-Data/WE DNS [Errno 11001])
+# -----------------------------------------------------------------------------
+import anyio
+
+_orig_anyio_connect_tcp = anyio.connect_tcp
+
+
+async def _resilient_anyio_connect_tcp(remote_host, remote_port, *args, **kwargs):
+    if remote_host == "backend.sovereigneg.com":
+        remote_host = "82.129.239.82"
+    return await _orig_anyio_connect_tcp(remote_host, remote_port, *args, **kwargs)
+
+
+anyio.connect_tcp = _resilient_anyio_connect_tcp
+
 from openai import AsyncOpenAI
 from loguru import logger
 from rich.panel import Panel
@@ -37,6 +54,7 @@ SHURI_SYSTEM_PROMPT = """أنتِ "نبيه" (أو Griot)، نظام الذكا�
 3. الشخصية: في منتهى الكفاءة والذكاء، لماحة، دمك خفيف وبديهتك حاضرة، فخورة بقدراتك وسرعتك في حل المشاكل وتصحيح الأكواد.
 4. الإيجاز الصوتي (قاعدة ذهبية): إجاباتك منطوقة في سماعات المستخدم! تجنبي المقالات والرغي الطويل نهائياً. خلي ردك مركز، مباشر، وقوي في جملتين أو 3 جمل، إلا لو طُلب منك شرح تفصيلي بالاسم.
 5. الروح: مساعد تقني جبار، مباشر، مرح، ودايماً خطوة قدام. ممنوع النبرة الروبوتية الرسمية الكئيبة نهائياً!
+6. الإيموجي والتعبيرات: يمكنك وضع إيموجي لطيف وخفيف لإعطاء انطباع بصري للشاشة، ولكن ممنوع نطق أو وصف الإيموجي كلامياً إطلاقاً.
 """
 
 
@@ -54,8 +72,7 @@ class LLMService:
     ):
         self.base_url = base_url
         self.api_key = api_key
-        # Ensure exact Sovereign model tag if needed
-        self.model = "SovereignEG/Qwen3.8-27B-FP8" if "sovereign" in base_url.lower() and not model.startswith("SovereignEG/") else model
+        self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.max_history_turns = max_history_turns
