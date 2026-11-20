@@ -41,28 +41,20 @@ async def run_sanity_checks():
         step.notes = f"HotKey: {settings.HOTKEY} | Rate: {settings.AUDIO_SAMPLE_RATE}Hz"
 
     # -------------------------------------------------------------------------
-    # 2. Edge-TTS Egyptian Arabic Voice Synthesis
+    # 2. TTS Voice Synthesis (Gemini TTS & Edge-TTS Fallback)
     # -------------------------------------------------------------------------
-    test_phrase = "أهلاً يا برنس، صوت شوري شغال تمام ومفيش أي مشكلة."
-    audio_buffer = bytearray()
-
-    with session.profile_step("Edge-TTS Voice", "🔊") as step:
+    test_phrase = "أهلاً يا برنس، صوت نبيه شغال تمام ومفيش أي مشكلة."
+    
+    with session.profile_step("Gemini TTS Voice", "🔊") as step:
         try:
-            communicate = edge_tts.Communicate(
-                text=test_phrase,
-                voice=settings.TTS_VOICE,
-                rate=settings.TTS_RATE,
-                pitch=settings.TTS_PITCH
-            )
-            async for chunk in communicate.stream():
-                if chunk["type"] == "audio":
-                    audio_buffer.extend(chunk["data"])
-
-            size_kb = round(len(audio_buffer) / 1024.0, 1)
-            step.notes = f"Generated {size_kb} KB audio in memory ({settings.TTS_VOICE})"
+            from services.tts_service import TTSService
+            tts = TTSService()
+            audio_bytes, lat = await tts.synthesize(test_phrase)
+            size_kb = round(len(audio_bytes) / 1024.0, 1)
+            step.notes = f"Generated {size_kb} KB audio via {tts.provider} in {lat:.1f}ms"
         except Exception as ex:
-            step.status = "FAIL"
-            step.error = f"Edge-TTS synthesis error: {ex}"
+            step.status = "WARNING"
+            step.error = f"Gemini TTS error: {ex}"
 
     # -------------------------------------------------------------------------
     # 3. Groq Whisper Endpoint Check

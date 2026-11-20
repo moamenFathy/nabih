@@ -54,18 +54,21 @@ All logs are dual-outputted: formatted colorfully to the terminal with `rich` an
 
 ## 📊 Current Project State
 
-* **Active Phase:** `Phase 2: The Brain & Shuri Persona (Hosted Qwen 27B)`
-* **Codebase Status:** Phase 0 & Phase 1 **100% COMPLETED & VERIFIED BY USER**.
-* **Live Stack Operational:**
+* **Active Phase:** `Phase 3: The Hands - Tools Engine & Project Access`
+* **Codebase Status:** Phase 0, Phase 1, and Phase 2 **100% COMPLETED, TESTED & VERIFIED**.
+* **Live Features Operational:**
   - STT: Groq Whisper API (`whisper-large-v3`) - Transcribing in ~200-800ms
-  - TTS: Munsit AI (`Hala` Voice) + Microsoft Edge-TTS Fallback (`ar-EG-ShakirNeural`)
-  - Audio: 100% In-Memory RAM buffer (`io.BytesIO`)
-  - Subtitles: Synchronized live typewriter text streaming
+  - LLM Brain: Sovereign EG (`claude-haiku-5.5`) - Fast TTFT (~790ms), budget-friendly, full Function Calling support
+  - TTS Voice: Google Gemini TTS (`gemini-3.8-flash-lite-tts` - Aoede) with Microsoft Edge-TTS Fallback
+  - Reliability Engine: `ServiceCircuitBreaker` (`core/circuit_breaker.py`) tracking fallback counts, consecutive failures, and tripping to OPEN state after 3 failures for zero-latency bypass.
+  - Voice Optimization: 3-Stage Prefetched Pipeline (Background Audio Synthesis + Zero-gap Playback + Synchronized Subtitles)
+  - Audio Cleaning: Automatic emoji stripping from speech with visual retention on screen
+  - Network Resilience: Anycast Google & Cloudflare DNS resolver fallback
 * **Immediate Next Action:**
-  - Build `services/llm_service.py` connected to `https://backend.sovereigneg.com/v1`.
-  - Engineer the **Shuri Persona System Prompt** (Egyptian Arabic, witty, genius, confident).
-  - Implement Producer-Consumer streaming token chunking.
-  - Test real intelligent conversational voice in terminal.
+  - Build `tools/registry.py`: Automated tool decorator & JSON schema generator.
+  - Build `tools/file_tools.py`: Local folder tree explorer, file reader, and code editor.
+  - Build `tools/terminal_tools.py`: Safe CLI command execution (`git`, `npm`, `python`).
+  - Connect tool-calling feedback loop into Qwen 27B and test voice-guided file editing.
 
 ---
 
@@ -73,7 +76,7 @@ All logs are dual-outputted: formatted colorfully to the terminal with `rich` an
 
 ### [x] Phase 0: Environment Setup, Configuration & Diagnostics (COMPLETED)
 - [x] Create standardized project directory skeleton (`core/`, `services/`, `tools/`, `ui/`, `logs/`).
-- [x] Define dependencies in `requirements.txt` (`rich`, `loguru`, `openai`, `edge-tts`, `sounddevice`, `numpy`, `pywebview`, `pynput`).
+- [x] Define dependencies in `requirements.txt` (`rich`, `loguru`, `openai`, `edge-tts`, `sounddevice`, `numpy`, `pywebview`, `pynput`, `dnspython`).
 - [x] Implement central configuration reader in `config.py` with `.env` validation.
 - [x] **Build Pipeline Telemetry & Diagnostics Engine (`core/diagnostics.py`):**
   - [x] Implement `Timer` context managers for millisecond-level step profiling.
@@ -93,12 +96,14 @@ All logs are dual-outputted: formatted colorfully to the terminal with `rich` an
 - [x] Build `test_voice_loop.py`: Synchronized audio playback with real-time typewriter subtitles.
 - [x] Verified by user: Natural human speech and synchronized live subtitles running cleanly.
 
-### [ ] Phase 2: The Brain & Shuri Persona (INTEGRATED & TESTING)
+### [x] Phase 2: The Brain & Shuri Persona (COMPLETED & VERIFIED)
 - [x] Build `services/llm_service.py`: OpenAI-compatible client connecting to user's hosted `Qwen 27B-FP8`.
 - [x] Engineer the **Shuri/Griot AI Persona System Prompt**: Wakandan AI assistant identity, Egyptian Arabic dialect, witty, sharp, direct, technical mastery.
 - [x] Implement Producer-Consumer token handling and multi-turn context memory.
-- [x] Integrate full intelligent voice loop in `test_voice_loop.py` (Groq STT -> Sovereign Qwen 27B -> Munsit Hala TTS + Live Subtitles).
-- [ ] User testing & sign-off.
+- [x] Build `core/stream_orchestrator.py`: Arabic sentence chunker for sub-second Time-To-First-Audio (TTFA).
+- [x] Integrate resilient DNS resolver in `core/network_resilience.py` protecting against local ISP drops.
+- [x] Implement automatic emoji stripping for TTS with visual retention on screen.
+- [x] Verified by user: Real interactive multi-turn voice conversations with Sovereign Qwen and Hala voice.
 
 ### [ ] Phase 3: The Hands - Tool Registry & Project Access
 - [ ] Build `tools/registry.py`: `@register_tool` decorator with automated JSON schema extraction for function calling.

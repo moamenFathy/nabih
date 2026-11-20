@@ -1,13 +1,16 @@
 """
 Text-to-Speech (TTS) Service for Project Nabih.
-Supports Munsit AI (Hala Voice) and Microsoft Edge-TTS as a fallback.
+Supports Google Gemini TTS (gemini-3.8-flash-tts) as primary and Microsoft Edge-TTS as automatic fallback.
 Plays audio in real-time from RAM using pygame.mixer with zero disk I/O.
 """
 
 import sys
 import io
+import os
+import re
 import time
 import json
+import base64
 import asyncio
 import urllib.request
 import urllib.error
@@ -20,7 +23,6 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 # Suppress pygame startup message
-import os
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
 import pygame
 import edge_tts
@@ -29,17 +31,41 @@ from rich.panel import Panel
 
 from config import settings
 from core.diagnostics import PipelineTelemetry, console
+from core.circuit_breaker import ServiceCircuitBreaker
+
+# Regex to strip emojis and symbols from text before sending to speech engines
+EMOJI_PATTERN = re.compile(
+    "["
+    "\U0001F600-\U0001F64F"  # emoticons
+    "\U0001F300-\U0001F5FF"  # symbols & pictographs
+    "\U0001F680-\U0001F6FF"  # transport & map symbols
+    "\U0001F1E0-\U0001F1FF"  # flags
+    "\U00002702-\U000027B0"
+    "\U000024C2-\U0001F251"
+    "\U0001F900-\U0001F9FF"  # supplemental symbols
+    "\U0001FA00-\U0001FA6F"
+    "\U0001FA70-\U0001FAFF"
+    "\U00002600-\U000026FF"  # misc symbols (like 🖤)
+    "]+",
+    flags=re.UNICODE,
+)
+
+
+def clean_text_for_speech(text: str) -> str:
+    """Removes emojis and special symbol characters so TTS never pronounces them aloud."""
+    cleaned = EMOJI_PATTERN.sub("", text)
+    return re.sub(r"\s+", " ", cleaned).strip()
 
 
 class TTSService:
-    """High-quality Arabic Speech synthesis and playback service (Munsit + Edge-TTS fallback)."""
+    """High-quality Speech synthesis and playback service (Google Gemini TTS + Edge-TTS fallback)."""
 
     def __init__(
         self,
         provider: str = settings.TTS_PROVIDER,
-        munsit_api_key: str = settings.MUNSIT_API_KEY,
-        munsit_voice_id: str = settings.MUNSIT_VOICE_ID,
-        munsit_model_id: str = settings.MUNSIT_MODEL_ID,
+        gemini_api_key: str = settings.GEMINI_API_KEY,
+        gemini_model: str = settings.GEMINI_TTS_MODEL,
+        gemini_voice: str = settings.GEMINI_TTS_VOICE,
         edge_voice: str = settings.TTS_VOICE,
         edge_rate: str = settings.TTS_RATE,
         edge_pitch: str = settings.TTS_PITCH,
@@ -49,55 +75,78 @@ class TTSService:
         **kwargs,
     ):
         self.provider = provider.lower()
-        self.munsit_api_key = munsit_api_key
-        self.munsit_voice_id = munsit_voice_id
-        self.munsit_model_id = munsit_model_id
+        self.gemini_api_key = gemini_api_key
+        self.gemini_model = gemini_model
+        self.gemini_voice = gemini_voice
         self.edge_voice = voice or edge_voice
         self.edge_rate = rate or edge_rate
         self.edge_pitch = pitch or edge_pitch
+        self.circuit_breaker = ServiceCircuitBreaker(
+            service_name="Gemini-TTS",
+            failure_threshold=3,
+            recovery_timeout_s=120.0
+        )
         self._ensure_mixer()
+
+    @property
+    def fallback_stats(self) -> dict:
+        """Returns the health and fallback statistics of the primary TTS service."""
+        return self.circuit_breaker.get_status_summary()
 
     def _ensure_mixer(self):
         """Initializes pygame mixer for in-memory audio playback."""
         if not pygame.mixer.get_init():
             try:
-                # 24000 Hz handles both Munsit WAV and Edge-TTS audio smoothly
+                # 24000 Hz handles Gemini WAV and Edge-TTS audio smoothly
                 pygame.mixer.init(frequency=24000, size=-16, channels=2, buffer=1024)
                 logger.debug("[TTS SERVICE] Pygame audio mixer initialized.")
             except Exception as ex:
                 logger.error(f"[TTS SERVICE] Failed to initialize pygame mixer: {ex}")
 
-    async def _synthesize_munsit(self, text: str) -> Tuple[bytes, float]:
-        """Synthesizes text using Munsit AI (Hala voice) in RAM."""
+    async def _synthesize_gemini_raw(self, text: str) -> Tuple[bytes, float]:
+        """Synthesizes text using Google Gemini TTS in RAM. Raises exception on failure."""
         start_time = time.perf_counter()
-        url = f"https://api.munsit.com/api/v1/text-to-speech/{self.munsit_model_id}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.gemini_model}:generateContent?key={self.gemini_api_key}"
+
         payload = {
-            "text": text,
-            "voice_id": self.munsit_voice_id,
-        }
-        headers = {
-            "x-api-key": self.munsit_api_key,
-            "Content-Type": "application/json",
+            "contents": [{
+                "parts": [{"text": text}]
+            }],
+            "generationConfig": {
+                "responseModalities": ["AUDIO"],
+                "speechConfig": {
+                    "voiceConfig": {
+                        "prebuiltVoiceConfig": {
+                            "voiceName": self.gemini_voice
+                        }
+                    }
+                }
+            }
         }
 
-        # Run blocking network call in background thread pool
         def _request():
             req = urllib.request.Request(
                 url,
                 data=json.dumps(payload).encode("utf-8"),
-                headers=headers
+                headers={"Content-Type": "application/json"},
+                method="POST"
             )
-            with urllib.request.urlopen(req, timeout=10.0) as resp:
-                return resp.read()
+            with urllib.request.urlopen(req, timeout=8.0) as resp:
+                res_data = json.loads(resp.read().decode("utf-8"))
+                candidates = res_data.get("candidates", [])
+                if not candidates:
+                    raise ValueError("No candidates returned from Gemini TTS")
+                parts = candidates[0].get("content", {}).get("parts", [])
+                for part in parts:
+                    if "inlineData" in part:
+                        b64_audio = part["inlineData"].get("data", "")
+                        return base64.b64decode(b64_audio)
+                raise ValueError("No audio inlineData found in Gemini response")
 
-        try:
-            audio_bytes = await asyncio.to_thread(_request)
-            latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
-            logger.info(f"[TTS SERVICE] Munsit synthesized {len(audio_bytes) / 1024:.1f} KB in {latency_ms}ms (Voice: Hala)")
-            return audio_bytes, latency_ms
-        except Exception as ex:
-            logger.warning(f"[TTS SERVICE] Munsit synthesis failed ({ex}). Falling back to Edge-TTS...")
-            return await self._synthesize_edge(text)
+        audio_bytes = await asyncio.to_thread(_request)
+        latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
+        logger.info(f"[TTS SERVICE] Gemini TTS synthesized {len(audio_bytes) / 1024:.1f} KB in {latency_ms}ms ({self.gemini_model} - {self.gemini_voice})")
+        return audio_bytes, latency_ms
 
     async def _synthesize_edge(self, text: str) -> Tuple[bytes, float]:
         """Synthesizes text using Microsoft Edge-TTS as fallback."""
@@ -121,13 +170,35 @@ class TTSService:
         return audio_bytes, latency_ms
 
     async def synthesize(self, text: str) -> Tuple[bytes, float]:
-        """Synthesizes text according to configured provider."""
-        if not text.strip():
+        """
+        Synthesizes text according to configured provider.
+        Governed by Circuit Breaker: if primary fails repeatedly, it bypasses
+        directly to Edge-TTS with 0s latency overhead.
+        """
+        clean_text = clean_text_for_speech(text)
+        if not clean_text:
             return b"", 0.0
 
-        if self.provider == "munsit" and self.munsit_api_key:
-            return await self._synthesize_munsit(text)
-        return await self._synthesize_edge(text)
+        if self.provider == "gemini" and self.gemini_api_key:
+            # 1. Check Circuit Breaker: Is primary currently marked as DOWN?
+            if not self.circuit_breaker.should_attempt_primary():
+                logger.debug(
+                    f"[TTS SERVICE] Circuit Breaker is OPEN ({self.circuit_breaker.consecutive_failures} failures). "
+                    f"Skipping Gemini to avoid latency. Synthesizing directly via Edge-TTS."
+                )
+                return await self._synthesize_edge(clean_text)
+
+            # 2. Attempt Primary (Gemini TTS)
+            try:
+                audio_bytes, latency_ms = await self._synthesize_gemini_raw(clean_text)
+                self.circuit_breaker.record_success()
+                return audio_bytes, latency_ms
+            except Exception as ex:
+                self.circuit_breaker.record_fallback(str(ex))
+                # Fallback to Edge-TTS
+                return await self._synthesize_edge(clean_text)
+
+        return await self._synthesize_edge(clean_text)
 
     async def speak(
         self,
@@ -135,8 +206,8 @@ class TTSService:
         on_start: Optional[Callable[[], None]] = None,
     ) -> float:
         """
-        Synthesizes text and plays audio through the speakers from RAM.
-        Triggers on_start callback immediately as playback begins.
+        Synthesizes text and plays audio through speakers directly from RAM.
+        Triggers on_start callback as soon as playback begins.
         """
         audio_bytes, synth_latency = await self.synthesize(text)
         if not audio_bytes:
@@ -167,7 +238,7 @@ class TTSService:
             return synth_latency
 
     def stop(self):
-        """Immediately interrupts and halts audio playback."""
+        """Immediately halts audio playback."""
         if pygame.mixer.get_init() and pygame.mixer.music.get_busy():
             pygame.mixer.music.stop()
             logger.debug("[TTS SERVICE] Audio playback halted.")
@@ -178,27 +249,27 @@ class TTSService:
 # -----------------------------------------------------------------------------
 async def run_tts_test():
     console.print(Panel(
-        f"[bold cyan]Testing Munsit AI Speech Synthesis Engine[/bold cyan]\n"
-        f"Provider: {settings.TTS_PROVIDER.upper()} | Voice: Hala ({settings.MUNSIT_VOICE_ID})\n"
+        f"[bold cyan]Testing Google Gemini Speech Synthesis Engine[/bold cyan]\n"
+        f"Provider: {settings.TTS_PROVIDER.upper()} | Model: {settings.GEMINI_TTS_MODEL} | Voice: {settings.GEMINI_TTS_VOICE}\n"
         "Synthesizing and playing speech through your headphones...",
-        title="🔊 [bold blue]MUNSIT VOICE TEST[/bold blue]",
+        title="🔊 [bold blue]GEMINI TTS TEST[/bold blue]",
         border_style="blue",
     ))
 
     tts = TTSService()
-    test_phrase = "يا مساء الفل يا برنس! أنا هالة، سامعة صوتك وجاهزة أساعدك في أي كود!"
+    test_phrase = "يا مساء الفل يا برنس! أنا نبيه، وصوتي طالع لايف من جوجل جيميني فلاش تي تي اس!"
 
-    session = PipelineTelemetry("munsit_playback_test")
+    session = PipelineTelemetry("gemini_tts_playback_test")
 
-    with session.profile_step("Munsit AI (Hala)", "🔊") as step:
+    with session.profile_step("Gemini TTS", "🔊") as step:
         start = time.perf_counter()
-        console.print(f"🤖 [bold green]Speaking (Hala):[/bold green] [bold white]{test_phrase}[/bold white]")
+        console.print(f"🤖 [bold green]Speaking (Gemini {settings.GEMINI_TTS_VOICE}):[/bold green] [bold white]{test_phrase}[/bold white]")
         await tts.speak(test_phrase)
         elapsed_ms = round((time.perf_counter() - start) * 1000, 2)
-        step.notes = f"Voice: Hala | Synthesized & played in {elapsed_ms}ms"
+        step.notes = f"Model: {settings.GEMINI_TTS_MODEL} | Synthesized & played in {elapsed_ms}ms"
 
     session.print_telemetry_table(
-        user_text="Test Munsit Voice Request",
+        user_text="Test Gemini TTS Request",
         shuri_reply=test_phrase
     )
 
