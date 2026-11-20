@@ -105,12 +105,12 @@ All logs are dual-outputted: formatted colorfully to the terminal with `rich` an
 - [x] Implement automatic emoji stripping for TTS with visual retention on screen.
 - [x] Verified by user: Real interactive multi-turn voice conversations with Sovereign Qwen and Hala voice.
 
-### [ ] Phase 3: The Hands - Tool Registry & Project Access
+### [x] Phase 3: The Hands - Tool Registry & Project Access (COMPLETED & VERIFIED)
 - [x] Build `tools/registry.py`: `@register_tool` decorator with automated JSON schema extraction for function calling (COMPLETED & VERIFIED).
 - [x] Build `tools/file_tools.py`: Local directory tree explorer, file reader, code writer, and patcher (COMPLETED & VERIFIED).
 - [x] Build `tools/terminal_tools.py`: Safe CLI command runner (`git status`, `npm run`, etc.) with security sandboxing (COMPLETED & VERIFIED).
-- [ ] Hook tool-calling loop into the LLM orchestrator with diagnostic profiling for tool execution time and I/O.
-- [ ] Test voice-guided bug fixing on a local project file.
+- [x] Hook tool-calling loop into the LLM orchestrator with diagnostic profiling for tool execution time and I/O (COMPLETED & VERIFIED).
+- [x] Test voice-guided project inspection and tool execution (COMPLETED & VERIFIED).
 
 ### [ ] Phase 4: Desktop UI & Global Hotkey (The Full Experience)
 - [ ] Build `core/state_machine.py`: Deterministic state transitions (`IDLE`, `LISTENING`, `THINKING`, `SPEAKING`).
