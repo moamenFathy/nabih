@@ -8,6 +8,9 @@ from typing import Optional
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Activate resilient DNS fallback for all network calls
+import core.network_resilience
+
 
 class Settings(BaseSettings):
     """Application settings and secrets loaded from .env file."""
@@ -29,11 +32,11 @@ class Settings(BaseSettings):
     LLM_TEMPERATURE: float = Field(default=0.7, ge=0.0, le=2.0)
     LLM_MAX_TOKENS: int = Field(default=1024, gt=0)
 
-    # 3. Text-to-Speech (Munsit & Microsoft Edge-TTS)
-    TTS_PROVIDER: str = Field(default="munsit", description="TTS provider: 'munsit' or 'edge'")
-    MUNSIT_API_KEY: str = Field(default="", description="Munsit API key")
-    MUNSIT_VOICE_ID: str = Field(default="08XOzRjaaumxbHhcGOrWkJ7z", description="Munsit Voice ID for Hala")
-    MUNSIT_MODEL_ID: str = Field(default="faseeh-v1-preview", description="Munsit TTS Model ID")
+    # 3. Text-to-Speech (Google Gemini TTS & Microsoft Edge-TTS Fallback)
+    TTS_PROVIDER: str = Field(default="gemini", description="TTS provider: 'gemini' or 'edge'")
+    GEMINI_API_KEY: str = Field(default="", description="Gemini API key for speech synthesis")
+    GEMINI_TTS_MODEL: str = Field(default="gemini-3.8-flash-lite-tts", description="Gemini TTS Model ID")
+    GEMINI_TTS_VOICE: str = Field(default="Aoede", description="Prebuilt voice name (Aoede, Kore, Puck, etc.)")
     TTS_VOICE: str = Field(default="ar-EG-ShakirNeural", description="Egyptian Arabic voice fallback for Edge-TTS")
     TTS_RATE: str = Field(default="+15%", description="Speaking speed adjustment")
     TTS_PITCH: str = Field(default="+0Hz", description="Voice pitch adjustment")
