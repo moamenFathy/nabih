@@ -6,7 +6,7 @@ Uses Pydantic Settings to load, validate, and provide typed access to environmen
 from pathlib import Path
 from typing import Optional
 from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict, PydanticBaseSettingsSource
 
 # Activate resilient DNS fallback for all network calls
 import core.network_resilience
@@ -21,6 +21,18 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        # Give .env precedence so stale terminal env variables do not accidentally override config
+        return init_settings, dotenv_settings, env_settings
+
     # 1. Speech-to-Text (Groq Whisper)
     GROQ_API_KEY: str = Field(default="gsk_placeholder", description="Groq API Key for Whisper STT")
     GROQ_MODEL: str = Field(default="whisper-large-v3", description="Whisper model on Groq")
@@ -32,8 +44,9 @@ class Settings(BaseSettings):
     LLM_TEMPERATURE: float = Field(default=0.7, ge=0.0, le=2.0)
     LLM_MAX_TOKENS: int = Field(default=1024, gt=0)
 
-    # 3. Text-to-Speech (Google Gemini TTS & Microsoft Edge-TTS Fallback)
-    TTS_PROVIDER: str = Field(default="gemini", description="TTS provider: 'gemini' or 'edge'")
+    # 3. Text-to-Speech (Google Gemini TTS, Colab XTTS-v2 & Microsoft Edge-TTS Fallback)
+    TTS_PROVIDER: str = Field(default="edge", description="TTS provider: 'gemini', 'xtts', or 'edge'")
+    XTTS_API_URL: str = Field(default="", description="Public endpoint for Colab XTTS-v2 server (e.g. trycloudflare.com)")
     GEMINI_API_KEY: str = Field(default="", description="Gemini API key for speech synthesis")
     GEMINI_TTS_MODEL: str = Field(default="gemini-3.8-flash-lite-tts", description="Gemini TTS Model ID")
     GEMINI_TTS_VOICE: str = Field(default="Aoede", description="Prebuilt voice name (Aoede, Kore, Puck, etc.)")

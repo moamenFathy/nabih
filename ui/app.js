@@ -47,24 +47,20 @@ class AssistantApp {
     switch (state) {
       case "IDLE":
         this.statusLabel.innerText = customLabel || "جاهز ومستعد • IDLE";
-        this.statusDot.style.background = "#06b6d4";
         break;
 
       case "LISTENING":
         this.statusLabel.innerText = customLabel || "سامعك يا برنس... • LISTENING";
-        this.statusDot.style.background = "#10b981";
-        this.subtitleText.innerText = "جاري الاستماع لصوتك...";
+        this.subtitleText.innerHTML = '<span class="speaker-pill speaker-user">🎙️ استماع</span><span class="speech-content">سامع صوتك، اتكلم براحتك...</span>';
         break;
 
       case "THINKING":
         this.statusLabel.innerText = customLabel || "المخ شغال... • THINKING";
-        this.statusDot.style.background = "#38bdf8";
-        this.subtitleText.innerText = "نبيه بيفكر وينفذ الأدوات...";
+        this.subtitleText.innerHTML = '<span class="speaker-pill speaker-bot">⚡ معالجة</span><span class="speech-content">نبيه بيفكر وينفذ الأدوات...</span>';
         break;
 
       case "SPEAKING":
         this.statusLabel.innerText = customLabel || "نبيه بيتكلم • SPEAKING";
-        this.statusDot.style.background = "#f59e0b";
         break;
     }
   }
@@ -78,9 +74,9 @@ class AssistantApp {
     if (!text) return;
 
     if (isUser) {
-      this.subtitleText.innerHTML = `<span style="color:#06b6d4; font-weight:700;">أنت:</span> ${text}`;
+      this.subtitleText.innerHTML = `<span class="speaker-pill speaker-user">👤 أنت</span><span class="speech-content">${text}</span>`;
     } else {
-      this.subtitleText.innerHTML = `<span style="color:#f59e0b; font-weight:700;">نبيه:</span> ${text}`;
+      this.subtitleText.innerHTML = `<span class="speaker-pill speaker-bot">✨ نبيه</span><span class="speech-content">${text}</span>`;
     }
 
     // Auto-scroll to bottom of subtitles panel
@@ -102,7 +98,17 @@ class AssistantApp {
   }
 
   /**
-   * Fallback click on the Orb to trigger listening if hotkey is not used.
+   * Triggers an immediate interrupt/cancellation of any active task or speech.
+   */
+  triggerInterrupt() {
+    console.log("[NABIH UI] 🛑 User triggered interrupt.");
+    if (window.pywebview && window.pywebview.api) {
+      window.pywebview.api.interrupt();
+    }
+  }
+
+  /**
+   * Fallback click on the Orb to trigger listening or cancel.
    */
   toggleListening() {
     if (window.pywebview && window.pywebview.api) {
@@ -113,6 +119,13 @@ class AssistantApp {
 
 // Global instance exposed for Python calls
 window.assistantApp = new AssistantApp();
+
+// Global Escape key listener inside webview
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    window.assistantApp.triggerInterrupt();
+  }
+});
 
 // Bridge aliases directly on window for simple Python evaluate_js
 window.setAssistantState = (state, label) => window.assistantApp.setState(state, label);

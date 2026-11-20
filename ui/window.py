@@ -24,9 +24,15 @@ from core.state_machine import AgentState, StateMachine
 class AssistantBridgeApi:
     """Exposes Python methods to JavaScript running inside the PyWebView webview."""
 
-    def __init__(self, on_close: Optional[Callable[[], None]] = None, on_orb_click: Optional[Callable[[], None]] = None):
+    def __init__(
+        self,
+        on_close: Optional[Callable[[], None]] = None,
+        on_orb_click: Optional[Callable[[], None]] = None,
+        on_interrupt: Optional[Callable[[], None]] = None,
+    ):
         self.on_close = on_close
         self.on_orb_click = on_orb_click
+        self.on_interrupt = on_interrupt
 
     def get_initial_config(self):
         """Returns startup configuration to JavaScript."""
@@ -40,6 +46,12 @@ class AssistantBridgeApi:
         logger.info("[UI BRIDGE] Close application requested from UI.")
         if self.on_close:
             self.on_close()
+
+    def interrupt(self):
+        """Called when user requests an immediate interruption/cancellation from UI."""
+        logger.info("[UI BRIDGE] 🛑 Instant interrupt requested from UI.")
+        if self.on_interrupt:
+            self.on_interrupt()
 
     def on_orb_clicked(self):
         """Called when user clicks the Glowing Orb."""
@@ -56,9 +68,14 @@ class AssistantUI:
         state_machine: Optional[StateMachine] = None,
         on_close: Optional[Callable[[], None]] = None,
         on_orb_click: Optional[Callable[[], None]] = None,
+        on_interrupt: Optional[Callable[[], None]] = None,
     ):
         self.state_machine = state_machine
-        self.bridge_api = AssistantBridgeApi(on_close=on_close, on_orb_click=on_orb_click)
+        self.bridge_api = AssistantBridgeApi(
+            on_close=on_close,
+            on_orb_click=on_orb_click,
+            on_interrupt=on_interrupt,
+        )
         self.window: Optional[webview.Window] = None
         self._html_path = (Path(__file__).parent / "index.html").resolve()
 
@@ -71,13 +88,13 @@ class AssistantUI:
         self.window = webview.create_window(
             title="Nabih AI Assistant",
             url=str(self._html_path),
-            width=420,
-            height=430,
+            width=430,
+            height=520,
             resizable=False,
             frameless=True,
             on_top=True,
             transparent=True,
-            background_color="#00000000",
+            background_color="#000000",
             js_api=self.bridge_api,
         )
         logger.info("[UI WINDOW] Floating widget window initialized.")

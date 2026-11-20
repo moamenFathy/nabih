@@ -8,42 +8,109 @@
 </head>
 <body>
 
-  <!-- Floating Glassmorphic Assistant Card -->
+  <!-- Floating Holographic Glassmorphic Card -->
   <main class="widget-card state-idle" id="appCard">
 
-    <!-- Top Bar with Drag Region and Controls -->
+    <!-- Dynamic Ambient Backlight Glow -->
+    <div class="card-ambient-glow" id="cardAmbient"></div>
+
+    <!-- Top Drag Bar & Minimalist Controls -->
     <header class="drag-bar pywebview-drag-region">
       <div class="brand-tag">
-        <span class="brand-icon" id="brandIndicator"></span>
-        <span class="brand-name">NABIH • نبيه</span>
+        <div class="brand-glyph">
+          <svg class="brand-svg" viewBox="0 0 24 24" fill="none">
+            <defs>
+              <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#06b6d4" />
+                <stop offset="50%" stop-color="#8b5cf6" />
+                <stop offset="100%" stop-color="#ec4899" />
+              </linearGradient>
+            </defs>
+            <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" stroke="url(#brandGrad)" stroke-width="2.2" stroke-linejoin="round"/>
+            <circle cx="12" cy="12" r="3.5" fill="url(#brandGrad)"/>
+          </svg>
+        </div>
+        <div class="brand-meta">
+          <span class="brand-title">NABIH</span>
+          <span class="brand-subtitle">نَبِيه • مساعدك الذكي</span>
+        </div>
       </div>
+
       <div class="window-controls">
-        <button class="control-btn" id="closeBtn" title="Close" onclick="window.assistantApp && window.assistantApp.closeWidget()">✕</button>
+        <button class="control-btn interrupt-btn" id="interruptBtn" title="إلغاء فوري (Esc)" onclick="window.assistantApp && window.assistantApp.triggerInterrupt()">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="4" y="4" width="16" height="16" rx="3"/>
+          </svg>
+        </button>
+        <button class="control-btn close-btn" id="closeBtn" title="إغلاق" onclick="window.assistantApp && window.assistantApp.closeWidget()">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
       </div>
     </header>
 
-    <!-- Glowing Interactive Orb -->
+    <!-- 3D Living Holographic Orb -->
     <section class="orb-stage" id="orbStage" onclick="window.assistantApp && window.assistantApp.toggleListening()">
+      <!-- Atmospheric Radiant Bloom -->
       <div class="orb-halo" id="orbHalo"></div>
-      <div class="orb-ring" id="orbRing"></div>
-      <div class="orb-core" id="orbCore"></div>
+
+      <!-- Ultrasonic Expansion Ripples -->
+      <div class="orb-ripple ripple-1"></div>
+      <div class="orb-ripple ripple-2"></div>
+
+      <!-- Gyroscopic 3D Holographic Orbit Rings -->
+      <div class="orbit-ring ring-primary"></div>
+      <div class="orbit-ring ring-secondary"></div>
+
+      <!-- 3D Light-Bending Vibranium Core -->
+      <div class="orb-sphere">
+        <div class="orb-plasma"></div>
+        <div class="orb-specular"></div>
+        <div class="orb-glow-inner"></div>
+      </div>
     </section>
 
-    <!-- State Indicator Badge -->
+    <!-- Dynamic Audio Equalizer Waveform -->
+    <div class="waveform-stage" id="waveformStage">
+      <span class="wave-bar bar-1"></span>
+      <span class="wave-bar bar-2"></span>
+      <span class="wave-bar bar-3"></span>
+      <span class="wave-bar bar-4"></span>
+      <span class="wave-bar bar-5"></span>
+      <span class="wave-bar bar-6"></span>
+      <span class="wave-bar bar-7"></span>
+    </div>
+
+    <!-- Holographic Radar Status Pill -->
     <div class="status-pill" id="statusPill">
-      <span class="status-dot" id="statusDot"></span>
-      <span id="statusLabel">جاهز ومستعد • IDLE</span>
+      <span class="status-beacon">
+        <span class="beacon-ping"></span>
+        <span class="beacon-core" id="statusDot"></span>
+      </span>
+      <span class="status-text" id="statusLabel">جاهز ومستعد • IDLE</span>
     </div>
 
     <!-- Live Synchronized Subtitles Area -->
     <section class="subtitles-panel" id="subtitlesPanel">
-      <p class="subtitle-text" id="subtitleText">اضغط باستمرار على Caps Lock للتحدث مع نبيه...</p>
+      <div class="subtitles-inner">
+        <p class="subtitle-text" id="subtitleText">
+          اضغط باستمرار على <kbd class="inline-kbd">Caps Lock</kbd> للتحدث مع نبيه...
+        </p>
+      </div>
     </section>
 
-    <!-- Bottom Keyboard Shortcut Hint -->
+    <!-- Modern Keycap Badges Hint Footer -->
     <footer class="hint-bar">
-      <span>Push-to-Talk:</span>
-      <kbd class="kbd-badge" id="hotkeyBadge">Caps Lock</kbd>
+      <div class="hint-item">
+        <kbd class="kbd-badge" id="hotkeyBadge">Caps Lock</kbd>
+        <span class="hint-label">تحدث</span>
+      </div>
+      <span class="hint-bullet">•</span>
+      <div class="hint-item">
+        <kbd class="kbd-badge esc-badge">Esc</kbd>
+        <span class="hint-label">إلغاء</span>
+      </div>
     </footer>
 
   </main>

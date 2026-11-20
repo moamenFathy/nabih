@@ -81,6 +81,29 @@ class AudioRecorder:
         self._stream.start()
         logger.debug("[AUDIO RECORDER] Microphone stream started in RAM.")
 
+    def cancel(self):
+        """Immediately halts active recording and discards all buffered audio without processing."""
+        if not self._is_recording and self._stream is None:
+            return
+
+        self._is_recording = False
+        if self._stream is not None:
+            try:
+                self._stream.stop()
+                self._stream.close()
+            except Exception as ex:
+                logger.error(f"[AUDIO RECORDER] Error cancelling stream: {ex}")
+            finally:
+                self._stream = None
+
+        while not self._audio_queue.empty():
+            try:
+                self._audio_queue.get_nowait()
+            except queue.Empty:
+                break
+
+        logger.debug("[AUDIO RECORDER] 🛑 Active recording cancelled and RAM buffer purged.")
+
     def stop(self) -> Tuple[bytes, Dict[str, Any]]:
         """
         Stops capturing audio and returns:

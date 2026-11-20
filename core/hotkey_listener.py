@@ -40,11 +40,13 @@ class HotkeyListener:
         state_machine: Optional[StateMachine] = None,
         on_press_callback: Optional[Callable[[], None]] = None,
         on_release_callback: Optional[Callable[[], None]] = None,
+        on_interrupt_callback: Optional[Callable[[], None]] = None,
     ):
         self.hotkey_name = hotkey_name.lower().strip()
         self.state_machine = state_machine
         self.on_press_callback = on_press_callback
         self.on_release_callback = on_release_callback
+        self.on_interrupt_callback = on_interrupt_callback
 
         self._target_key = self._resolve_key(self.hotkey_name)
         self._is_pressed = False
@@ -91,6 +93,20 @@ class HotkeyListener:
 
     def _on_key_press(self, key):
         """Low-level keyboard hook callback on key down."""
+        # Check for global Escape key (Instant Interrupt / Cancel)
+        if key == keyboard.Key.esc:
+            with self._lock:
+                was_holding = self._is_pressed
+                self._is_pressed = False
+
+            logger.info("[HOTKEY LISTENER] 🛑 Global ESC intercepted -> Triggering instant cancellation.")
+            if self.on_interrupt_callback:
+                try:
+                    self.on_interrupt_callback()
+                except Exception as ex:
+                    logger.error(f"[HOTKEY LISTENER] on_interrupt_callback error: {ex}")
+            return
+
         if not self._matches_target(key):
             return
 

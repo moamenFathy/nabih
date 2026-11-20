@@ -75,11 +75,21 @@ class NaturalSentenceChunker:
 class StreamOrchestrator:
     """
     Coordinates concurrent token streaming, background audio prefetching,
-    and zero-gap synchronized speech playback.
+    and zero-gap synchronized speech playback with instant interruption support.
     """
 
     def __init__(self, tts_service: TTSService):
         self.tts = tts_service
+        self._interrupted: bool = False
+
+    def interrupt(self):
+        """Immediately halts token streaming, audio prefetching, and speech playback."""
+        self._interrupted = True
+        try:
+            self.tts.stop()
+        except Exception:
+            pass
+        logger.info("[STREAM ORCHESTRATOR] 🛑 Interrupted: stopped all stages and cleared audio.")
 
     async def execute_stream(
         self,
@@ -94,6 +104,7 @@ class StreamOrchestrator:
           - Stage 3: Zero-gap Playback & Synchronized Subtitles
         Returns: (full_text_response, time_to_first_speech_ms)
         """
+        self._interrupted = False
         sentence_queue: asyncio.Queue = asyncio.Queue()
         audio_queue: asyncio.Queue = asyncio.Queue(maxsize=3)
 
@@ -110,18 +121,25 @@ class StreamOrchestrator:
             nonlocal first_token_ttft
             try:
                 async for token, ttft in token_stream:
+                    if self._interrupted:
+                        break
                     if ttft is not None and first_token_ttft == 0.0:
                         first_token_ttft = ttft
                     full_tokens.append(token)
 
                     for sentence in chunker.add_token(token):
+                        if self._interrupted:
+                            break
                         await sentence_queue.put(sentence)
 
                 # Flush final trailing sentence if any
                 trailing = chunker.flush()
-                if trailing:
+                if trailing and not self._interrupted:
                     await sentence_queue.put(trailing)
 
+            except asyncio.CancelledError:
+                logger.debug("[STREAM ORCHESTRATOR] Producer cancelled.")
+                raise
             except Exception as ex:
                 logger.error(f"[STREAM ORCHESTRATOR] Producer error: {ex}")
             finally:
@@ -132,19 +150,28 @@ class StreamOrchestrator:
         # Stage 2: Synthesizer (Prefetcher) - Prepares audio in RAM ahead of time
         # ---------------------------------------------------------------------
         async def synthesizer():
-            while True:
-                sentence = await sentence_queue.get()
-                if sentence is None:
+            while not self._interrupted:
+                try:
+                    sentence = await sentence_queue.get()
+                except asyncio.CancelledError:
+                    break
+
+                if sentence is None or self._interrupted:
                     # Signal player that all audio has been queued
                     await audio_queue.put((None, None))
                     break
 
                 try:
                     audio_bytes, latency_ms = await self.tts.synthesize(sentence)
-                    if audio_bytes:
-                        await audio_queue.put((sentence, audio_bytes))
+                    if not self._interrupted:
+                        await audio_queue.put((sentence, audio_bytes if audio_bytes else None))
+                except asyncio.CancelledError:
+                    break
                 except Exception as ex:
                     logger.error(f"[STREAM ORCHESTRATOR] Synthesis prefetch error on '{sentence[:20]}...': {ex}")
+                    if not self._interrupted:
+                        # Fallback: still put sentence in queue so text is displayed in subtitles
+                        await audio_queue.put((sentence, None))
 
         # ---------------------------------------------------------------------
         # Stage 3: Player - Plays audio with 0ms gap & reveals synced subtitles
@@ -153,9 +180,13 @@ class StreamOrchestrator:
             nonlocal ttfa_ms
             is_first_sentence = True
 
-            while True:
-                sentence, audio_bytes = await audio_queue.get()
-                if sentence is None or audio_bytes is None:
+            while not self._interrupted:
+                try:
+                    sentence, audio_bytes = await audio_queue.get()
+                except asyncio.CancelledError:
+                    break
+
+                if sentence is None or self._interrupted:
                     break
 
                 # Record Time-To-First-Audio (TTFA)
@@ -163,12 +194,16 @@ class StreamOrchestrator:
                     ttfa_ms = round((time.perf_counter() - pipeline_start) * 1000, 2)
                     is_first_sentence = False
 
-                # Reveal subtitle precisely as audio begins playing!
-                if on_sentence_display:
+                # Reveal subtitle in UI in real-time!
+                if on_sentence_display and not self._interrupted:
                     try:
                         on_sentence_display(sentence)
                     except Exception as disp_err:
                         logger.error(f"[STREAM ORCHESTRATOR] Display callback error: {disp_err}")
+
+                # If synthesis failed for this sentence, proceed to next without crashing
+                if not audio_bytes:
+                    continue
 
                 # Play audio directly from RAM
                 try:
@@ -178,13 +213,23 @@ class StreamOrchestrator:
                     pygame.mixer.music.play()
 
                     while pygame.mixer.music.get_busy():
+                        if self._interrupted:
+                            pygame.mixer.music.stop()
+                            break
                         await asyncio.sleep(0.02)
 
+                except asyncio.CancelledError:
+                    pygame.mixer.music.stop()
+                    break
                 except Exception as play_err:
                     logger.error(f"[STREAM ORCHESTRATOR] Playback error: {play_err}")
 
-        # Run all 3 stages concurrently!
-        await asyncio.gather(producer(), synthesizer(), player())
+        # Run all 3 stages concurrently with cancellation protection
+        try:
+            await asyncio.gather(producer(), synthesizer(), player())
+        except asyncio.CancelledError:
+            self.interrupt()
+            raise
 
         full_reply = "".join(full_tokens).strip()
         return full_reply, ttfa_ms
