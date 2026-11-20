@@ -106,7 +106,7 @@ All logs are dual-outputted: formatted colorfully to the terminal with `rich` an
 - [x] Verified by user: Real interactive multi-turn voice conversations with Sovereign Qwen and Hala voice.
 
 ### [ ] Phase 3: The Hands - Tool Registry & Project Access
-- [ ] Build `tools/registry.py`: `@register_tool` decorator with automated JSON schema extraction for function calling.
+- [x] Build `tools/registry.py`: `@register_tool` decorator with automated JSON schema extraction for function calling (COMPLETED & VERIFIED).
 - [ ] Build `tools/file_tools.py`: Local directory tree explorer, file reader, and code writer.
 - [ ] Build `tools/terminal_tools.py`: Safe CLI command runner (`git status`, `npm run`, etc.) with security sandboxing.
 - [ ] Hook tool-calling loop into the LLM orchestrator with diagnostic profiling for tool execution time and I/O.
